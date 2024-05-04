@@ -48,14 +48,11 @@ fn dot_product(
     // m = q and n = q
     // else check that it's already transposed
 
-    let dot_product;
-
-    if first.shape() == second.shape() {
-        dot_product = second.dot(&first.t());
-    } else {
-        dot_product = first.dot(second);
+    if first.shape() != second.shape() {
+        panic!("Incorrect dimensions, both vectors must match");
     }
 
+    let dot_product = second.dot(&first.t());
     dot_product
 }
 
