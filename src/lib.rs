@@ -54,7 +54,6 @@ fn dot_product(
     }
 
     let dot_product = second.dot(&first.t());
-    println!("dot product: {}", dot_product);
 
     dot_product
 }
@@ -79,6 +78,22 @@ fn euclidean_distance(
 mod tests {
     use super::*;
 
+    const SEACH_TEXT: &'static str =
+        "Football fans enjoy gathering to watch matches at sports bars.";
+
+    const MOST_SIMILAR: [&'static str; 3] = [
+        "Attending football games at the stadium is an exciting experience.",
+        "On sunny days, people often gather outdoors for a friendly game of football.",
+        "Rainy weather can sometimes lead to canceled outdoor events like football matches.",
+    ];
+    const SENTENCES: [&'static str; 5] = [
+        "On sunny days, people often gather outdoors for a friendly game of football.",
+        "Attending football games at the stadium is an exciting experience.",
+        "Grilling burgers and hot dogs is a popular activity during summer barbecues.",
+        "Rainy weather can sometimes lead to canceled outdoor events like football matches.",
+        "Sunny weather is ideal for outdoor activities like playing football.",
+    ];
+
     #[test]
     fn test_cosine_similarity_on_same_vectors() {
         let first_vector = ndarray::Array1::<f64>::zeros(2).map(|x| x + 2.0);
@@ -90,48 +105,82 @@ mod tests {
     }
 
     #[test]
-    fn test_cosine_similarity_on_subset_of_words_comp_cmp() {
-        let payload_vecs = generator::word_to_vector();
+    fn test_find_top_3_similar_words_using_cosine_similarity() {
+        let sentences_vectors = generator::word_to_vector();
+
+        let mut most_similar_result: Vec<(&'static str, f64)> = vec![];
 
         let first_vector =
-            ndarray::Array1::<f64>::from_vec(payload_vecs.get("comp").unwrap().to_owned());
-        let second_vector =
-            ndarray::Array1::<f64>::from_vec(payload_vecs.get("cmp").unwrap().to_owned());
+            ndarray::Array1::<f64>::from_vec(sentences_vectors.get(SEACH_TEXT).unwrap().to_owned());
 
-        let similarity = cosine_similarity(&first_vector, &second_vector).round();
+        for sentence in SENTENCES.iter() {
+            let second_vector = ndarray::Array1::<f64>::from_vec(
+                sentences_vectors.get(*sentence).unwrap().to_owned(),
+            );
 
-        println!("Sim {}", similarity);
+            let similarity = cosine_similarity(&first_vector, &second_vector);
 
-        assert_eq!(similarity, 1.0);
+            most_similar_result.push((*sentence, similarity))
+        }
+
+        // sort by largest first, the closer to zero the more similar it is
+        most_similar_result.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+
+        let final_result: Vec<&'static str> = most_similar_result.iter().map(|s| s.0).collect();
+
+        assert_eq!(MOST_SIMILAR.to_vec(), final_result[..3]);
     }
     #[test]
-    fn test_euclidean_distance_on_subset_of_words_comp_cmp() {
-        let payload_vecs = generator::word_to_vector();
+    fn test_find_top_3_similar_words_using_euclidean_distance() {
+        let sentences_vectors = generator::word_to_vector();
+
+        let mut most_similar_result: Vec<(&'static str, f64)> = vec![];
 
         let first_vector =
-            ndarray::Array1::<f64>::from_vec(payload_vecs.get("comp").unwrap().to_owned());
-        let second_vector =
-            ndarray::Array1::<f64>::from_vec(payload_vecs.get("cmp").unwrap().to_owned());
+            ndarray::Array1::<f64>::from_vec(sentences_vectors.get(SEACH_TEXT).unwrap().to_owned());
 
-        let similarity = euclidean_distance(&first_vector, &second_vector).round();
+        for sentence in SENTENCES.iter() {
+            let second_vector = ndarray::Array1::<f64>::from_vec(
+                sentences_vectors.get(*sentence).unwrap().to_owned(),
+            );
 
-        println!("Sim {}", similarity);
+            let similarity = euclidean_distance(&first_vector, &second_vector);
 
-        assert!(similarity > 0.0);
+            most_similar_result.push((*sentence, similarity))
+        }
+
+        // sort by smallest first, the closer to zero the more similar it is
+        most_similar_result.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+
+        let final_result: Vec<&'static str> = most_similar_result.iter().map(|s| s.0).collect();
+
+        assert_eq!(MOST_SIMILAR.to_vec(), final_result[..3]);
     }
+
     #[test]
-    fn test_euclidean_distance_on_subset_of_words_home_homework() {
-        let payload_vecs = generator::word_to_vector();
+    fn test_find_top_3_similar_words_using_dot_product() {
+        let sentences_vectors = generator::word_to_vector();
+
+        let mut most_similar_result: Vec<(&'static str, f64)> = vec![];
 
         let first_vector =
-            ndarray::Array1::<f64>::from_vec(payload_vecs.get("home").unwrap().to_owned());
-        let second_vector =
-            ndarray::Array1::<f64>::from_vec(payload_vecs.get("homework").unwrap().to_owned());
+            ndarray::Array1::<f64>::from_vec(sentences_vectors.get(SEACH_TEXT).unwrap().to_owned());
 
-        let similarity = euclidean_distance(&first_vector, &second_vector).round();
+        for sentence in SENTENCES.iter() {
+            let second_vector = ndarray::Array1::<f64>::from_vec(
+                sentences_vectors.get(*sentence).unwrap().to_owned(),
+            );
 
-        println!("Sim {}", similarity);
+            let similarity = dot_product(&first_vector, &second_vector);
 
-        assert!(similarity == 0.0);
+            most_similar_result.push((*sentence, similarity))
+        }
+
+        // sort by largest first, the closer to zero the more similar it is
+        most_similar_result.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+
+        let final_result: Vec<&'static str> = most_similar_result.iter().map(|s| s.0).collect();
+
+        assert_eq!(MOST_SIMILAR.to_vec(), final_result[..3]);
     }
 }
