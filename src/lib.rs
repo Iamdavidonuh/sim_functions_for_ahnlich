@@ -1,8 +1,9 @@
 use ndarray::prelude::*;
+mod generator;
 
 fn cosine_similarity(
-    first: ndarray::ArrayBase<ndarray::OwnedRepr<f64>, Ix1>,
-    second: ndarray::ArrayBase<ndarray::OwnedRepr<f64>, Ix1>,
+    first: &ndarray::ArrayBase<ndarray::OwnedRepr<f64>, Ix1>,
+    second: &ndarray::ArrayBase<ndarray::OwnedRepr<f64>, Ix1>,
 ) -> f64 {
     // formular = dot product of vectors / product of the magnitude of the vectors
     // maginiture of a vector can be calcuated using pythagoras theorem.
@@ -53,6 +54,8 @@ fn dot_product(
     }
 
     let dot_product = second.dot(&first.t());
+    println!("dot product: {}", dot_product);
+
     dot_product
 }
 
@@ -81,8 +84,54 @@ mod tests {
         let first_vector = ndarray::Array1::<f64>::zeros(2).map(|x| x + 2.0);
         let second_vector = ndarray::Array1::<f64>::zeros(2).map(|x| x + 2.0);
 
-        let similarity = cosine_similarity(first_vector, second_vector).round();
+        let similarity = cosine_similarity(&first_vector, &second_vector).round();
 
         assert_eq!(similarity, 1.0);
+    }
+
+    #[test]
+    fn test_cosine_similarity_on_subset_of_words_comp_cmp() {
+        let payload_vecs = generator::word_to_vector();
+
+        let first_vector =
+            ndarray::Array1::<f64>::from_vec(payload_vecs.get("comp").unwrap().to_owned());
+        let second_vector =
+            ndarray::Array1::<f64>::from_vec(payload_vecs.get("cmp").unwrap().to_owned());
+
+        let similarity = cosine_similarity(&first_vector, &second_vector).round();
+
+        println!("Sim {}", similarity);
+
+        assert_eq!(similarity, 1.0);
+    }
+    #[test]
+    fn test_euclidean_distance_on_subset_of_words_comp_cmp() {
+        let payload_vecs = generator::word_to_vector();
+
+        let first_vector =
+            ndarray::Array1::<f64>::from_vec(payload_vecs.get("comp").unwrap().to_owned());
+        let second_vector =
+            ndarray::Array1::<f64>::from_vec(payload_vecs.get("cmp").unwrap().to_owned());
+
+        let similarity = euclidean_distance(&first_vector, &second_vector).round();
+
+        println!("Sim {}", similarity);
+
+        assert!(similarity > 0.0);
+    }
+    #[test]
+    fn test_euclidean_distance_on_subset_of_words_home_homework() {
+        let payload_vecs = generator::word_to_vector();
+
+        let first_vector =
+            ndarray::Array1::<f64>::from_vec(payload_vecs.get("home").unwrap().to_owned());
+        let second_vector =
+            ndarray::Array1::<f64>::from_vec(payload_vecs.get("homework").unwrap().to_owned());
+
+        let similarity = euclidean_distance(&first_vector, &second_vector).round();
+
+        println!("Sim {}", similarity);
+
+        assert!(similarity == 0.0);
     }
 }

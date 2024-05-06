@@ -13,6 +13,12 @@ Below are the algorithms
 - Cosine similarity, etc
 
 
+# Dot Product
+
+The dot product or scalar product is an algebraic operation that takes two equal-length sequences of numbers (usually coordinate vectors), and returns a single number.
+
+An Implementation for most similar items would be a MaxHeap, The larger the dot product between two vectors, the more similar
+
 
 
 # COSINE SIMILARITY
@@ -42,8 +48,11 @@ To calculate the cosine similarity for two vectors, we need to:
         cos(0) = A.B / ||A||.||B||
     ```
 
+An Implementation for most similar items would be a MinHeap, The smaller the distance between two points, denotes higher similarity
 
 # Euclidean similarity
+
+
  d(p,q)= sqrt { (p-q)^2 }
 Euclidean distance is the square root of the sum of squared differences between corresponding
 elements of the two vectors.
@@ -57,3 +66,9 @@ prone to skewness if the units of the vectors are vastly different.
 Hence, it is important to ensure that the data is normalised before applying the Euclidean distance function.
 Additionally due to the curse of dimensionality, the effectiveness of Euclidean distance breaks down as 
 dimensionality increases.
+
+
+
+An Implementation for most similar items would be a MinHeap, The smaller the distance between two points, denotes higher similarity
+
+
