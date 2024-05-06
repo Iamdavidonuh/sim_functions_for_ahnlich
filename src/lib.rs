@@ -123,7 +123,7 @@ mod tests {
             most_similar_result.push((*sentence, similarity))
         }
 
-        // sort by largest first, the closer to zero the more similar it is
+        // sort by largest first, the closer to one the more similar it is
         most_similar_result.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
 
         let final_result: Vec<&'static str> = most_similar_result.iter().map(|s| s.0).collect();
@@ -176,7 +176,7 @@ mod tests {
             most_similar_result.push((*sentence, similarity))
         }
 
-        // sort by largest first, the closer to zero the more similar it is
+        // sort by largest first, the larger the value the more similar it is
         most_similar_result.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
 
         let final_result: Vec<&'static str> = most_similar_result.iter().map(|s| s.0).collect();
