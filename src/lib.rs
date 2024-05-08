@@ -1,6 +1,6 @@
 use ndarray::prelude::*;
 mod generator;
-
+mod types;
 fn cosine_similarity(
     first: &ndarray::ArrayBase<ndarray::OwnedRepr<f64>, Ix1>,
     second: &ndarray::ArrayBase<ndarray::OwnedRepr<f64>, Ix1>,
@@ -78,15 +78,15 @@ fn euclidean_distance(
 mod tests {
     use super::*;
 
-    const SEACH_TEXT: &'static str =
+    pub(crate) const SEACH_TEXT: &'static str =
         "Football fans enjoy gathering to watch matches at sports bars.";
 
-    const MOST_SIMILAR: [&'static str; 3] = [
+    pub(crate) const MOST_SIMILAR: [&'static str; 3] = [
         "Attending football games at the stadium is an exciting experience.",
         "On sunny days, people often gather outdoors for a friendly game of football.",
         "Rainy weather can sometimes lead to canceled outdoor events like football matches.",
     ];
-    const SENTENCES: [&'static str; 5] = [
+    pub(crate) const SENTENCES: [&'static str; 5] = [
         "On sunny days, people often gather outdoors for a friendly game of football.",
         "Attending football games at the stadium is an exciting experience.",
         "Grilling burgers and hot dogs is a popular activity during summer barbecues.",
