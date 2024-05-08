@@ -140,6 +140,9 @@ mod tests {
                     )
                 })
                 .collect();
-        assert_eq!(most_similar_sentences_vec, similar_n_vecs)
+        for vector in &most_similar_sentences_vec {
+            assert!(similar_n_vecs.contains(&vector));
+        }
+        assert_eq!(most_similar_sentences_vec.len(), similar_n_vecs.len())
     }
 }
