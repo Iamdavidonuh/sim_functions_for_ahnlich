@@ -25,13 +25,13 @@ trait KNearestN {
         search_algorithm: &str,
         n: usize,
     ) -> Vec<(ndarray::ArrayBase<ndarray::OwnedRepr<f64>, Ix1>, f64)> {
-        let (algorithm, mut heap_type) = self.get_algorithm_and_heap_type(&search_algorithm);
-        println!(" Before Get Max n called");
+        let (algorithm, mut heap_type) = self.get_algorithm_and_heap_type(n, &search_algorithm);
         match algorithm {
             Algorithm::Cosine => {
                 for second_vector in search_list {
                     let similarity = crate::cosine_similarity(search_vector, &second_vector);
                     let heap_value: NonNanF64 = (second_vector, similarity).into();
+
                     heap_type.push(heap_value)
                 }
             }
@@ -53,22 +53,27 @@ trait KNearestN {
             }
         }
 
-        println!("Get Max n called");
-
         heap_type.get_max_n(n)
     }
 
     fn get_algorithm_and_heap_type(
         &self,
+        heap_capacity: usize,
         search_algorithm: &str,
     ) -> (Algorithm, AlgorithmHeapType) {
         match search_algorithm {
-            "cosine_similarity" => (Algorithm::Cosine, AlgorithmHeapType::MIN(MinHeap::new())),
+            "cosine_similarity" => (
+                Algorithm::Cosine,
+                AlgorithmHeapType::MIN(MinHeap::new(heap_capacity)),
+            ),
             "dot_product" => (
                 Algorithm::DotProduct,
-                AlgorithmHeapType::MAX(MaxHeap::new()),
+                AlgorithmHeapType::MAX(MaxHeap::new(heap_capacity)),
             ),
-            "euclidean_distance" => (Algorithm::Euclidean, AlgorithmHeapType::MIN(MinHeap::new())),
+            "euclidean_distance" => (
+                Algorithm::Euclidean,
+                AlgorithmHeapType::MIN(MinHeap::new(heap_capacity)),
+            ),
             _other => panic!("Not a valid Algorithm choice"),
         }
     }

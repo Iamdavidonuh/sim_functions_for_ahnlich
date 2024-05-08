@@ -6,11 +6,12 @@ use std::collections::BinaryHeap;
 #[derive(PartialEq)]
 pub(crate) struct NonNanF64<'a>((&'a ndarray::ArrayBase<ndarray::OwnedRepr<f64>, Ix1>, f64));
 
-impl<'a> From<(&ndarray::ArrayBase<ndarray::OwnedRepr<f64>, Ix1>, f64)> for NonNanF64<'a> {
-    fn from(value: (&ndarray::ArrayBase<ndarray::OwnedRepr<f64>, Ix1>, f64)) -> Self {
-        value.into()
+impl<'a> From<(&'a ndarray::ArrayBase<ndarray::OwnedRepr<f64>, Ix1>, f64)> for NonNanF64<'a> {
+    fn from(value: (&'a ndarray::ArrayBase<ndarray::OwnedRepr<f64>, Ix1>, f64)) -> NonNanF64<'a> {
+        NonNanF64((value.0, value.1))
     }
 }
+
 impl<'a> Eq for NonNanF64<'a> {}
 
 impl PartialOrd for NonNanF64<'_> {
@@ -30,9 +31,9 @@ pub(crate) struct MinHeap<'a> {
 }
 
 impl<'a> MinHeap<'a> {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(n: usize) -> Self {
         Self {
-            heap: BinaryHeap::new(),
+            heap: BinaryHeap::with_capacity(n),
         }
     }
     pub(crate) fn push(&mut self, item: NonNanF64<'a>) {
@@ -49,7 +50,7 @@ impl<'a> MinHeap<'a> {
         let mut output = vec![];
         let mut count: usize = 0;
 
-        while count <= n {
+        while count < n {
             match self.pop() {
                 Some(value) => {
                     let vector = value.0 .0.to_owned();
@@ -70,9 +71,9 @@ pub(crate) struct MaxHeap<'a> {
 }
 
 impl<'a> MaxHeap<'a> {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(n: usize) -> Self {
         Self {
-            heap: BinaryHeap::new(),
+            heap: BinaryHeap::with_capacity(n),
         }
     }
     fn push(&mut self, item: NonNanF64<'a>) {
@@ -86,7 +87,7 @@ impl<'a> MaxHeap<'a> {
         let mut output = vec![];
         let mut count: usize = 0;
 
-        while count <= n {
+        while count < n {
             match self.pop() {
                 Some(value) => {
                     let vector = value.0 .0.to_owned();
