@@ -3,24 +3,23 @@ use std::cmp::Reverse;
 
 use std::collections::BinaryHeap;
 
-/// Implementations for MinHeap and MaxHeap was changed slightly.
-/// We only want to create a Heap with a max_capacity set by N
-///
-/// For MaxHeap, use the Reverse to pop in the opposite direction, which is the
-/// Smallest items first.
-///
-/// For MinHeap, we pop the largest items first, leaving only smaller values
-///
-/// Essentially the MaxHeap works like the Minheap and the MinHeap works like the maxHeap.
-/// Since we only care about the Pop operation, this works for us
-///
-/// Ordering does not matter to us anymore, we just want to keep the most and the Least items
-/// in the heap at all times without growing it exponentially.
-///
-/// This makes it  easier to return most/least N without growing both heaps to K
-///
+pub(crate) type AlgorithmFunc = fn(
+    &ndarray::ArrayBase<ndarray::OwnedRepr<f64>, Ix1>,
+    &ndarray::ArrayBase<ndarray::OwnedRepr<f64>, Ix1>,
+) -> f64;
 
-#[derive(PartialEq)]
+impl<'a> From<&'a Algorithm> for AlgorithmFunc {
+    fn from(value: &'a Algorithm) -> AlgorithmFunc {
+        match value {
+            Algorithm::Cosine => crate::cosine_similarity,
+
+            Algorithm::Euclidean => crate::euclidean_distance,
+
+            Algorithm::DotProduct => crate::dot_product,
+        }
+    }
+}
+#[derive(PartialEq, Debug)]
 pub(crate) struct NonNanF64<'a>((&'a ndarray::ArrayBase<ndarray::OwnedRepr<f64>, Ix1>, f64));
 
 impl<'a> From<(&'a ndarray::ArrayBase<ndarray::OwnedRepr<f64>, Ix1>, f64)> for NonNanF64<'a> {
@@ -28,118 +27,107 @@ impl<'a> From<(&'a ndarray::ArrayBase<ndarray::OwnedRepr<f64>, Ix1>, f64)> for N
         NonNanF64((value.0, value.1))
     }
 }
+impl<'a> From<NonNanF64<'a>> for (&'a ndarray::ArrayBase<ndarray::OwnedRepr<f64>, Ix1>, f64) {
+    fn from(value: NonNanF64<'a>) -> (&'a ndarray::ArrayBase<ndarray::OwnedRepr<f64>, Ix1>, f64) {
+        (value.0 .0, value.0 .1)
+    }
+}
 
 impl<'a> Eq for NonNanF64<'a> {}
 
 impl PartialOrd for NonNanF64<'_> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        (other.0).1.partial_cmp(&(&self.0).1)
+        (self.0).1.partial_cmp(&(&other.0).1)
     }
 }
 
 impl Ord for NonNanF64<'_> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        ((self.0).1).partial_cmp(&(other.0).1).unwrap()
+        (self.0).1.partial_cmp(&(&other.0).1).unwrap()
     }
 }
 
 pub(crate) struct MinHeap<'a> {
     max_capacity: usize,
-    heap: BinaryHeap<NonNanF64<'a>>,
+    heap: BinaryHeap<Reverse<NonNanF64<'a>>>,
 }
 
 impl<'a> MinHeap<'a> {
     pub(crate) fn new(n: usize) -> Self {
         Self {
-            heap: BinaryHeap::with_capacity(n),
+            heap: BinaryHeap::new(),
             max_capacity: n,
         }
     }
-    //pub(crate) fn push(&mut self, item: NonNanF64<'a>) {
-    //    self.heap.push(Reverse(item));
-    // }
+    pub(crate) fn len(&self) -> usize {
+        self.heap.len()
+    }
     pub(crate) fn push(&mut self, item: NonNanF64<'a>) {
-        if self.heap.len() < self.max_capacity {
-            self.heap.push(item);
-        } else if let Some(current_max) = self.heap.peek() {
-            if item < *current_max {
-                self.heap.pop();
-                self.heap.push(item);
-            }
-        }
+        self.heap.push(Reverse(item));
     }
     pub(crate) fn pop(&mut self) -> Option<NonNanF64<'a>> {
-        self.heap.pop()
-    }
-
-    fn get_n(&mut self, n: usize) -> Vec<(ndarray::ArrayBase<ndarray::OwnedRepr<f64>, Ix1>, f64)> {
-        let mut output = vec![];
-        let mut count: usize = 0;
-
-        while count < n {
-            match self.pop() {
-                Some(value) => {
-                    let vector = value.0 .0.to_owned();
-                    let similarity = value.0 .1;
-
-                    output.push((vector, similarity));
-                }
-                None => break,
-            }
-            count += 1
-        }
-        output
-    }
-}
-
-pub(crate) struct MaxHeap<'a> {
-    max_capacity: usize,
-    heap: BinaryHeap<Reverse<NonNanF64<'a>>>,
-}
-
-impl<'a> MaxHeap<'a> {
-    pub(crate) fn new(n: usize) -> Self {
-        Self {
-            heap: BinaryHeap::with_capacity(n),
-            max_capacity: n,
-        }
-    }
-    fn push(&mut self, item: NonNanF64<'a>) {
-        if self.heap.len() < self.max_capacity {
-            self.heap.push(Reverse(item));
-        } else if let Some(Reverse(current_min)) = self.heap.peek() {
-            if item > *current_min {
-                self.heap.pop();
-                self.heap.push(Reverse(item));
-            }
-        }
-    }
-    //fn pop(&mut self) -> Option<NonNanF64<'a>> {
-    //    self.heap.pop()
-    //}
-    fn pop(&mut self) -> Option<NonNanF64> {
-        if let Some(reversed) = self.heap.pop() {
-            Some(reversed.0)
+        if let Some(popped_item) = self.heap.pop() {
+            Some(popped_item.0)
         } else {
             None
         }
     }
 
-    fn get_n(&mut self, n: usize) -> Vec<(ndarray::ArrayBase<ndarray::OwnedRepr<f64>, Ix1>, f64)> {
-        let mut output = vec![];
-        let mut count: usize = 0;
+    pub(crate) fn output(
+        &mut self,
+    ) -> Vec<(&'a ndarray::ArrayBase<ndarray::OwnedRepr<f64>, Ix1>, f64)> {
+        let mut result: Vec<(&'a ndarray::ArrayBase<ndarray::OwnedRepr<f64>, Ix1>, f64)> = vec![];
 
-        while count < n {
+        loop {
             match self.pop() {
                 Some(value) => {
-                    let vector = value.0 .0.to_owned();
-                    let similarity = value.0 .1;
-
-                    output.push((vector, similarity));
+                    if result.len() < self.max_capacity {
+                        let vector_sim = value.0;
+                        result.push((vector_sim.0, vector_sim.1));
+                    }
                 }
                 None => break,
             }
-            count += 1
+        }
+        result
+    }
+}
+
+pub(crate) struct MaxHeap<'a> {
+    max_capacity: usize,
+    heap: BinaryHeap<NonNanF64<'a>>,
+}
+
+impl<'a> MaxHeap<'a> {
+    pub(crate) fn new(n: usize) -> Self {
+        Self {
+            heap: BinaryHeap::new(),
+            max_capacity: n,
+        }
+    }
+    fn push(&mut self, item: NonNanF64<'a>) {
+        self.heap.push(item);
+    }
+    pub(crate) fn pop(&mut self) -> Option<NonNanF64<'a>> {
+        self.heap.pop()
+    }
+    pub(crate) fn len(&self) -> usize {
+        self.heap.len()
+    }
+
+    fn output(&mut self) -> Vec<(&'a ndarray::ArrayBase<ndarray::OwnedRepr<f64>, Ix1>, f64)> {
+        let mut output: Vec<_> = vec![];
+
+        loop {
+            match self.heap.pop() {
+                Some(value) => {
+                    if output.len() < self.max_capacity {
+                        let vector_sim = value.0;
+                        output.push((vector_sim.0, vector_sim.1));
+                    }
+                }
+                None => break,
+            }
         }
         output
     }
@@ -157,21 +145,19 @@ impl<'a> AlgorithmHeapType<'a> {
             Self::MIN(h) => h.push(item),
         }
     }
-
-    pub(crate) fn pop(&mut self) {
+    pub(crate) fn pop(&mut self) -> Option<NonNanF64<'a>> {
         match self {
-            Self::MIN(h) => h.pop(),
             Self::MAX(h) => h.pop(),
-        };
+            Self::MIN(h) => h.pop(),
+        }
     }
 
-    pub(crate) fn get_max_n(
+    pub(crate) fn output(
         &mut self,
-        n: usize,
-    ) -> Vec<(ndarray::ArrayBase<ndarray::OwnedRepr<f64>, Ix1>, f64)> {
+    ) -> Vec<(&'a ndarray::ArrayBase<ndarray::OwnedRepr<f64>, Ix1>, f64)> {
         match self {
-            Self::MIN(h) => h.get_n(n),
-            Self::MAX(h) => h.get_n(n),
+            Self::MIN(h) => h.output(),
+            Self::MAX(h) => h.output(),
         }
     }
 }
@@ -182,44 +168,107 @@ pub(crate) enum Algorithm {
     Cosine,
 }
 
+impl Algorithm {
+    pub(crate) fn init_heap(&self, capacity: usize) -> AlgorithmHeapType {
+        match self {
+            Self::Cosine | Self::Euclidean => AlgorithmHeapType::MIN(MinHeap::new(capacity)),
+            Self::DotProduct => AlgorithmHeapType::MAX(MaxHeap::new(capacity)),
+        }
+    }
+}
+
+#[cfg(test)]
+#[derive(PartialEq, Debug)]
+pub(crate) struct TestNonNanF64(f64);
+
+#[cfg(test)]
+impl From<f64> for TestNonNanF64 {
+    fn from(value: f64) -> TestNonNanF64 {
+        TestNonNanF64(value)
+    }
+}
+
+#[cfg(test)]
+impl Eq for TestNonNanF64 {}
+
+#[cfg(test)]
+impl PartialOrd for TestNonNanF64 {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.0.partial_cmp(&other.0)
+    }
+}
+
+#[cfg(test)]
+impl Ord for TestNonNanF64 {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.0.partial_cmp(&other.0).unwrap()
+    }
+}
 #[cfg(test)]
 mod tests {
-    use crate::types::{MaxHeap, MinHeap};
+    use crate::types::{MaxHeap, MinHeap, NonNanF64, Reverse};
 
-    use super::NonNanF64;
+    use super::*;
 
     #[test]
-    fn test_max_heap_doesnt_grow_beyond_max_capacity() {
-        let mut heap = MaxHeap::new(2);
-        let mut count = 4;
-        let first_vector = ndarray::Array1::<f64>::zeros(2).map(|x| x + 2.0);
+    fn test_b_heap() {
+        let mut heap = std::collections::BinaryHeap::new();
 
-        while count > 0 {
-            let similarity: f64 = 0.1 / count as f64;
+        // Wrap values in `Reverse`
+        let push_one: TestNonNanF64 = 1.0.into();
+        let push_two: TestNonNanF64 = 2.0.into();
+        let push_three: TestNonNanF64 = 5.0.into();
 
-            let item: NonNanF64 = (&first_vector, similarity).into();
-            heap.push(item);
+        heap.push(Reverse(push_one));
+        heap.push(Reverse(push_three));
+        heap.push(Reverse(push_two));
 
-            count -= 1;
-        }
-
-        assert!(heap.heap.len() == 2);
+        // If we pop these scores now, they should come back in the reverse order.
+        assert_eq!(heap.pop(), Some(Reverse(1.0.into())));
+        assert_eq!(heap.pop(), Some(Reverse(2.0.into())));
+        assert_eq!(heap.pop(), Some(Reverse(5.0.into())));
+        assert_eq!(heap.pop(), None);
     }
+
     #[test]
-    fn test_min_heap_doesnt_grow_beyond_max_capacity() {
-        let mut heap = MinHeap::new(2);
-        let mut count = 4;
+    fn test_min_heap_ordering_works() {
+        let mut heap = MinHeap::new(3);
+        let mut count = 0.0;
         let first_vector = ndarray::Array1::<f64>::zeros(2).map(|x| x + 2.0);
 
-        while count > 0 {
-            let similarity: f64 = 0.1 / count as f64;
-
+        // If we pop these scores now, they should come back in the reverse order.
+        while count < 5.0 {
+            let similarity: f64 = 1.0 + count;
             let item: NonNanF64 = (&first_vector, similarity).into();
+
             heap.push(item);
 
-            count -= 1;
+            count += 1.0;
         }
 
-        assert!(heap.heap.len() == 2);
+        assert_eq!(heap.pop(), Some((&first_vector, 1.0).into()));
+        assert_eq!(heap.pop(), Some((&first_vector, 2.0).into()));
+        assert_eq!(heap.pop(), Some((&first_vector, 3.0).into()));
+    }
+
+    #[test]
+    fn test_max_heap_ordering_works() {
+        let mut heap = MaxHeap::new(3);
+        let mut count = 0.0;
+        let first_vector = ndarray::Array1::<f64>::zeros(2).map(|x| x + 2.0);
+
+        // If we pop these scores now, they should come back  the right order(max first).
+        while count < 5.0 {
+            let similarity: f64 = 1.0 + count;
+            let item: NonNanF64 = (&first_vector, similarity).into();
+
+            heap.push(item);
+
+            count += 1.0;
+        }
+
+        assert_eq!(heap.pop(), Some((&first_vector, 5.0).into()));
+        assert_eq!(heap.pop(), Some((&first_vector, 4.0).into()));
+        assert_eq!(heap.pop(), Some((&first_vector, 3.0).into()));
     }
 }

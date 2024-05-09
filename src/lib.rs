@@ -76,6 +76,8 @@ fn euclidean_distance(
 
 #[cfg(test)]
 mod tests {
+    use crate::types::NonNanF64;
+
     use super::*;
 
     pub(crate) const SEACH_TEXT: &'static str =
@@ -102,6 +104,42 @@ mod tests {
         let similarity = cosine_similarity(&first_vector, &second_vector).round();
 
         assert_eq!(similarity, 1.0);
+    }
+    #[test]
+    fn test_find_top_3_similar_words_using_cosine_similarity_min_heap() {
+        let sentences_vectors = generator::word_to_vector();
+        let mut heap = crate::types::MinHeap::new(3);
+        let mut most_similar_vec: Vec<(&ndarray::ArrayBase<ndarray::OwnedRepr<f64>, Ix1>, f64)> =
+            vec![];
+
+        let first_vector =
+            ndarray::Array1::<f64>::from_vec(sentences_vectors.get(SEACH_TEXT).unwrap().to_owned());
+        let second_vector = ndarray::Array1::<f64>::from_vec(
+            sentences_vectors.get(MOST_SIMILAR[0]).unwrap().to_owned(),
+        );
+        let similarity = cosine_similarity(&first_vector, &second_vector);
+        most_similar_vec.push((&second_vector, similarity));
+
+        let heap_val: NonNanF64 = (&second_vector, similarity).into();
+
+        heap.push(heap_val);
+
+        let third_vector = ndarray::Array1::<f64>::from_vec(
+            sentences_vectors.get(MOST_SIMILAR[1]).unwrap().to_owned(),
+        );
+        let similarity = cosine_similarity(&first_vector, &third_vector);
+        most_similar_vec.push((&third_vector, similarity));
+
+        let heap_val: NonNanF64 = (&third_vector, similarity).into();
+        heap.push(heap_val);
+        assert_eq!(most_similar_vec.len(), heap.len());
+
+        while let Some(value) = heap.pop() {
+            let vector_value: (&ndarray::ArrayBase<ndarray::OwnedRepr<f64>, Ix1>, f64) =
+                value.into();
+
+            assert!(most_similar_vec.contains(&vector_value))
+        }
     }
 
     #[test]
