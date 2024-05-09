@@ -4,12 +4,17 @@ use std::{collections::HashMap, f64};
 
 use crate::types::{Algorithm, AlgorithmFunc, NonNanF64};
 
-pub(super) fn word_to_vector() -> HashMap<String, Vec<f64>> {
+pub(super) fn word_to_vector() -> HashMap<String, ndarray::ArrayBase<ndarray::OwnedRepr<f64>, Ix1>>
+{
     let words = std::fs::read_to_string("test_json.json").unwrap();
 
     let words_to_vec: HashMap<String, Vec<f64>> = serde_json::from_str(&words).unwrap();
 
-    words_to_vec
+    HashMap::from_iter(
+        words_to_vec
+            .into_iter()
+            .map(|(key, value)| (key, ndarray::Array1::<f64>::from_vec(value))),
+    )
 }
 
 trait KNearestN {
@@ -57,40 +62,68 @@ mod tests {
     use super::*;
     use crate::tests::{MOST_SIMILAR, SEACH_TEXT, SENTENCES};
 
-    #[test]
-    fn test_find_top_3_similar_words_using_cosine_similarity_min_heap() {
-        let sentences_vectors = word_to_vector();
-        let mut heap = crate::types::MinHeap::new(3);
-        let mut most_similar_vec: Vec<(&ndarray::ArrayBase<ndarray::OwnedRepr<f64>, Ix1>, f64)> =
-            vec![];
-
-        let first_vector =
-            ndarray::Array1::<f64>::from_vec(sentences_vectors.get(SEACH_TEXT).unwrap().to_owned());
-        let second_vector = ndarray::Array1::<f64>::from_vec(
-            sentences_vectors.get(MOST_SIMILAR[0]).unwrap().to_owned(),
-        );
-        let similarity = crate::cosine_similarity(&first_vector, &second_vector);
-        most_similar_vec.push((&second_vector, similarity));
-
-        let heap_val: NonNanF64 = (&second_vector, similarity).into();
-
-        heap.push(heap_val);
-
-        let third_vector = ndarray::Array1::<f64>::from_vec(
-            sentences_vectors.get(MOST_SIMILAR[1]).unwrap().to_owned(),
-        );
-        let similarity = crate::cosine_similarity(&first_vector, &third_vector);
-        most_similar_vec.push((&third_vector, similarity));
-
-        let heap_val: NonNanF64 = (&third_vector, similarity).into();
-        heap.push(heap_val);
-        assert_eq!(most_similar_vec.len(), heap.len());
-
-        while let Some(value) = heap.pop() {
-            let vector_value: (&ndarray::ArrayBase<ndarray::OwnedRepr<f64>, Ix1>, f64) =
-                value.into();
-
-            assert!(most_similar_vec.contains(&vector_value))
+    fn key_to_words(
+        key: &ndarray::ArrayBase<ndarray::OwnedRepr<f64>, Ix1>,
+        vector_to_sentences: &Vec<(ndarray::ArrayBase<ndarray::OwnedRepr<f64>, Ix1>, String)>,
+    ) -> Option<String> {
+        for (vector, word) in vector_to_sentences {
+            if key == vector {
+                return Some(word.to_string());
+            }
         }
+        None
+    }
+
+    #[test]
+    fn test_teststore_find_top_3_similar_words_using_find_nearest_n() {
+        let sentences_vectors = word_to_vector();
+
+        let vectors_to_sentences: Vec<_> = sentences_vectors
+            .clone()
+            .into_iter()
+            .map(|(key, value)| (value, key))
+            .collect();
+
+        let first_vector = sentences_vectors.get(SEACH_TEXT).unwrap().to_owned();
+
+        let mut search_list = vec![];
+
+        for sentence in SENTENCES.iter() {
+            let second_vector = sentences_vectors.get(*sentence).unwrap().to_owned();
+
+            search_list.push(second_vector)
+        }
+
+        let no_similar_values: usize = 3;
+
+        let test_store = TestStore::new();
+
+        let similar_n_search = test_store.find_similar_n(
+            &first_vector,
+            search_list.iter(),
+            &Algorithm::Cosine,
+            no_similar_values,
+        );
+
+        let similar_n_vecs: Vec<ndarray::ArrayBase<ndarray::OwnedRepr<f64>, Ix1>> =
+            similar_n_search
+                .into_iter()
+                .map(|(vector, _)| vector.to_owned())
+                .collect();
+
+        let most_similar_sentences_vec: Vec<ndarray::ArrayBase<ndarray::OwnedRepr<f64>, Ix1>> =
+            MOST_SIMILAR
+                .iter()
+                .map(|sentence| sentences_vectors.get(*sentence).unwrap().to_owned())
+                .collect();
+        let cosine_sentences: Vec<_> = similar_n_vecs
+            .iter()
+            .map(|val| key_to_words(val, &vectors_to_sentences))
+            .collect();
+
+        println!("{cosine_sentences:?}");
+        println!("{:?}", MOST_SIMILAR);
+
+        assert_eq!(most_similar_sentences_vec, similar_n_vecs);
     }
 }

@@ -48,7 +48,7 @@ To calculate the cosine similarity for two vectors, we need to:
         cos(0) = A.B / ||A||.||B||
     ```
 
-An Implementation for most similar items would be a MinHeap, The smaller the distance between two points, denotes higher similarity
+An Implementation for most similar items would be a MaxHeap, The smaller the distance between two points, denotes higher similarity
 
 # Euclidean similarity
 

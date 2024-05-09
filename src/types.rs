@@ -19,7 +19,7 @@ impl<'a> From<&'a Algorithm> for AlgorithmFunc {
         }
     }
 }
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub(crate) struct NonNanF64<'a>((&'a ndarray::ArrayBase<ndarray::OwnedRepr<f64>, Ix1>, f64));
 
 impl<'a> From<(&'a ndarray::ArrayBase<ndarray::OwnedRepr<f64>, Ix1>, f64)> for NonNanF64<'a> {
@@ -33,17 +33,23 @@ impl<'a> From<NonNanF64<'a>> for (&'a ndarray::ArrayBase<ndarray::OwnedRepr<f64>
     }
 }
 
+impl<'a> PartialEq for NonNanF64<'a> {
+    fn eq(&self, other: &Self) -> bool {
+        *(self.0 .0) == *(other.0 .0)
+    }
+}
+
 impl<'a> Eq for NonNanF64<'a> {}
 
 impl PartialOrd for NonNanF64<'_> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        (self.0).1.partial_cmp(&(&other.0).1)
+        (self.0).1.partial_cmp(&(other.0).1)
     }
 }
 
 impl Ord for NonNanF64<'_> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        (self.0).1.partial_cmp(&(&other.0).1).unwrap()
+        (self.0).1.partial_cmp(&(other.0).1).unwrap()
     }
 }
 
@@ -66,11 +72,7 @@ impl<'a> MinHeap<'a> {
         self.heap.push(Reverse(item));
     }
     pub(crate) fn pop(&mut self) -> Option<NonNanF64<'a>> {
-        if let Some(popped_item) = self.heap.pop() {
-            Some(popped_item.0)
-        } else {
-            None
-        }
+        self.heap.pop().map(|popped_item| popped_item.0)
     }
 
     pub(crate) fn output(
@@ -80,13 +82,11 @@ impl<'a> MinHeap<'a> {
 
         loop {
             match self.pop() {
-                Some(value) => {
-                    if result.len() < self.max_capacity {
-                        let vector_sim = value.0;
-                        result.push((vector_sim.0, vector_sim.1));
-                    }
+                Some(value) if result.len() < self.max_capacity => {
+                    let vector_sim = value.0;
+                    result.push((vector_sim.0, vector_sim.1));
                 }
-                None => break,
+                _ => break,
             }
         }
         result
@@ -120,13 +120,11 @@ impl<'a> MaxHeap<'a> {
 
         loop {
             match self.heap.pop() {
-                Some(value) => {
-                    if output.len() < self.max_capacity {
-                        let vector_sim = value.0;
-                        output.push((vector_sim.0, vector_sim.1));
-                    }
+                Some(value) if output.len() < self.max_capacity => {
+                    let vector_sim = value.0;
+                    output.push((vector_sim.0, vector_sim.1));
                 }
-                None => break,
+                _ => break,
             }
         }
         output
@@ -171,8 +169,8 @@ pub(crate) enum Algorithm {
 impl Algorithm {
     pub(crate) fn init_heap(&self, capacity: usize) -> AlgorithmHeapType {
         match self {
-            Self::Cosine | Self::Euclidean => AlgorithmHeapType::MIN(MinHeap::new(capacity)),
-            Self::DotProduct => AlgorithmHeapType::MAX(MaxHeap::new(capacity)),
+            Self::Euclidean => AlgorithmHeapType::MIN(MinHeap::new(capacity)),
+            Self::Cosine | Self::DotProduct => AlgorithmHeapType::MAX(MaxHeap::new(capacity)),
         }
     }
 }
